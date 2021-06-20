@@ -1,0 +1,10 @@
+---
+ - name: Fact dump
+   hosts: all
+   gather_facts: yes
+   tasks:
+     - name: print all facts
+       debug:
+         msg: >
+           Distribution is {{ ansible_facts.distribution }} & version is {{ ansible_facts.distribution_version }}
+ 
