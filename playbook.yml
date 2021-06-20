@@ -1,0 +1,103 @@
+---
+ - name: Play book for setting up web server env on server1
+   hosts: webservers
+   vars:
+     firewall_pkg: firewalld
+     firewall_svc: firewalld
+     web_pkg: httpd
+     web_svc: httpd
+     ssl_pkg: mod_ssl
+     httpdconf_src: files/httpd.conf
+     httpdconf_dest: /etc/httpd/conf/httpd.conf
+     htaccess_src: files/.htaccess
+     secrets_dir: /etc/httpd/secrets
+     secrets_src: files/htpasswd
+     secrets_dest: "{{ secrets_dir }}/htpasswd"
+     web_root: /var/www/html
+
+   tasks:
+     - name: Install latest version of FW & Apache package
+       yum:
+         name:
+           - "{{ firewall_pkg }}"
+           -  "{{ web_pkg }}"
+           -  "{{ ssl_pkg }}"       
+         state: latest
+     - name: Copy a new httpd.conf file into place, backing up the original if it differs from the copied version
+       copy:
+         src: "{{ httpdconf_src }}"
+         dest: "{{ httpdconf_dest }}" 
+         owner: root
+         group: root
+         mode: '0644'
+         backup: yes
+     - name: Create a directory if it does not exist
+       file:
+         path: "{{ secrets_dir }}"
+         state: directory
+         owner: apache
+         group: apache
+         mode: 0500
+     - name: Copy a new htpasswd file into place, backing up the original if it differs from the copied version
+       copy:
+         src: "{{ secrets_src }}"
+         dest: "{{ secrets_dest }}" 
+         owner: apache
+         group: apache
+         mode: '0500'
+         backup: yes
+     - name: Copy a new htpasswd file into place, backing up the original if it differs from the copied version
+       copy:
+         src: "{{ htaccess_src }}"
+         dest: "{{ web_root }}/.htaccess"
+         owner: apache
+         group: apache
+         mode: '0400'
+         backup: yes
+     - name: Copy using inline content
+       copy:
+         content: ' {{ ansible_facts.fqdn }} ({{ansible_facts.default_ipv4.address}}) has been updated by Ansible at 6:31PM.'
+         dest: "{{ web_root }}/index.html"
+    
+     - name: The {{ firewall_svc }} is started & enabled 
+       service:
+         name: "{{ firewall_svc }}"
+         enabled: true
+         state: started
+
+     - name: The firewall port for http is open
+       firewalld:
+         service: https
+         permanent: true
+         immediate: true
+         state: enabled
+
+     - name: The {{ web_svc }} is started & enabled
+       service:
+         name: "{{ web_svc }}"
+         enabled: true
+         state: started
+
+ - name: Second playbook for sanity checks
+   hosts: localhost
+   become: no
+   vars:
+     web_user: guest
+   vars_files:
+     - vars/secret.yml
+   tasks:
+     - name: Check that you can connect (GET) to a page and it returns a status 200
+       uri:
+         url: http://192.168.1.101
+         validate_certs: no
+         url_username: "{{ web_user }}"
+         url_password: "{{ web_pass }}"
+         force_basic_auth: yes
+         status_code: 200
+         return_content: yes
+       register: auth_test
+
+     - debug:
+         var: auth_test.content
+ 
+ 
