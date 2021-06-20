@@ -1,0 +1,2 @@
+# InfoSecAnsible
+Ansible for InfoSec
