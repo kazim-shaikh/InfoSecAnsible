@@ -1,6 +1,7 @@
 ---
  - name: Play book for setting up web server env on server1
-   hosts: webservers
+   #hosts: webservers
+   hosts: 192.168.1.101
    vars:
      firewall_pkg: firewalld
      firewall_svc: firewalld
